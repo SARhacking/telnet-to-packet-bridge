@@ -1,0 +1,19 @@
+[Unit]
+Description=AX.25 to Telnet Bridge Service
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/telnet-to-packet-bridge
+ExecStart=/usr/bin/python3 /home/pi/telnet-to-packet-bridge/bridge.py --callsign YOUR_CALLSIGN
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

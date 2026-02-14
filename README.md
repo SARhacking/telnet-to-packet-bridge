@@ -87,8 +87,39 @@ Available commands:
 
 Users can switch between modes at any time.
 
-## Notes
-- This is a basic implementation.
-- Ensure your AX.25 setup is correct and the BBS is reachable.
-- For production use, consider security, error handling, and resource management.
-- The bridge supports multiple concurrent AX.25 connections.
+## Running on Startup
+To automatically start the bridge when the system boots:
+
+1. Copy the service file:
+   ```
+   sudo cp ax25-bridge.service /etc/systemd/system/
+   ```
+
+2. Edit the service file to set your callsign and any other parameters:
+   ```
+   sudo nano /etc/systemd/system/ax25-bridge.service
+   ```
+   Update the `ExecStart` line with your callsign and desired options.
+
+3. Reload systemd and enable the service:
+   ```
+   sudo systemctl daemon-reload
+   sudo systemctl enable ax25-bridge
+   ```
+
+4. Start the service:
+   ```
+   sudo systemctl start ax25-bridge
+   ```
+
+5. Check status:
+   ```
+   sudo systemctl status ax25-bridge
+   ```
+
+6. View logs:
+   ```
+   sudo journalctl -u ax25-bridge -f
+   ```
+
+The service will automatically restart if it crashes and start on boot.
