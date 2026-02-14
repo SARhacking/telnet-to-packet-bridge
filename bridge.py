@@ -82,10 +82,10 @@ Choose an option: """
                         break
                     cmd = data.strip().decode('ascii', errors='ignore').upper()
                     if cmd in ['HELP', 'H', '?']:
-                        ax25_socket.send(b"Commands:\nHELP - Show this help\nSTATUS - Show bridge status\nBBS - Connect to BBS\nEXIT - Disconnect\n")
+                        ax25_socket.send(b"Commands:\nHELP - Show this help\nSTATUS - Show bridge status\nBBS - Connect to BBS\nCONNECT <host>[:port] - Connect to any telnet server\nEXIT - Disconnect\n")
                     elif cmd in ['STATUS', 'S']:
                         ax25_socket.send(b"Bridge status: Running\nAX.25 interface active\n")
-                    elif cmd in ['BBS', 'B', 'CONNECT', 'C']:
+                    elif cmd in ['BBS', 'B']:
                         # Switch to BBS
                         try:
                             telnet_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -102,6 +102,42 @@ Choose an option: """
                         except Exception as e:
                             ax25_socket.send(b"Failed to connect to BBS\n")
                             print(f"Failed to connect to BBS: {e}")
+                        finally:
+                            if 'telnet_socket' in locals():
+                                telnet_socket.close()
+                        break
+                    elif cmd.startswith('CONNECT ') or cmd.startswith('C '):
+                        # Connect to arbitrary telnet server
+                        try:
+                            # Parse host and port
+                            connect_args = cmd[8:].strip() if cmd.startswith('CONNECT ') else cmd[2:].strip()
+                            if ':' in connect_args:
+                                host, port_str = connect_args.split(':', 1)
+                                port = int(port_str)
+                            else:
+                                host = connect_args
+                                port = 23
+                            
+                            if not host:
+                                ax25_socket.send(b"Usage: CONNECT <host>[:port]\n")
+                                continue
+                            
+                            telnet_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                            telnet_socket.connect((host, port))
+                            ax25_socket.send(f"Connecting to {host}:{port}...\n".encode())
+                            print(f"AX.25 user connected to {host}:{port}")
+                            # Start forwarding
+                            ax25_to_telnet = threading.Thread(target=forward_data, args=(ax25_socket, telnet_socket))
+                            telnet_to_ax25 = threading.Thread(target=forward_data, args=(telnet_socket, ax25_socket))
+                            ax25_to_telnet.start()
+                            telnet_to_ax25.start()
+                            ax25_to_telnet.join()
+                            telnet_to_ax25.join()
+                        except ValueError:
+                            ax25_socket.send(b"Invalid port number. Use: CONNECT <host>[:port]\n")
+                        except Exception as e:
+                            ax25_socket.send(b"Failed to connect to specified server\n")
+                            print(f"Failed to connect to {host}:{port}: {e}")
                         finally:
                             if 'telnet_socket' in locals():
                                 telnet_socket.close()
