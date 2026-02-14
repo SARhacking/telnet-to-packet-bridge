@@ -19,9 +19,14 @@ import threading
 import sys
 import os
 import argparse
+import time
 
 # Ensure AX.25 module is loaded
 os.system('modprobe ax25')
+
+# Global connection counter
+active_connections = 0
+max_connections = 10  # Limit concurrent connections
 
 def forward_data(source, destination):
     """Forward data from source to destination."""
@@ -30,8 +35,12 @@ def forward_data(source, destination):
             data = source.recv(1024)
             if not data:
                 break
-            destination.send(data)
-    except:
+            destination.sendall(data)  # Use sendall for reliability
+    except (ConnectionResetError, BrokenPipeError, OSError):
+        # Expected when connections close
+        pass
+    except Exception as e:
+        print(f"Error in data forwarding: {e}")
         pass
 
 def handle_ax25_connection(ax25_socket, telnet_host, telnet_port):
@@ -54,6 +63,7 @@ Choose an option: """
             # Connect to BBS
             try:
                 telnet_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                telnet_socket.settimeout(30.0)  # 30 second timeout
                 telnet_socket.connect((telnet_host, telnet_port))
                 print(f"AX.25 user connected to BBS")
                 # Start forwarding
@@ -63,6 +73,9 @@ Choose an option: """
                 telnet_to_ax25.start()
                 ax25_to_telnet.join()
                 telnet_to_ax25.join()
+            except socket.timeout:
+                ax25_socket.send(b"Connection to BBS timed out\n")
+                print(f"Connection to BBS timed out")
             except Exception as e:
                 ax25_socket.send(b"Failed to connect to BBS\n")
                 print(f"Failed to connect to BBS: {e}")
@@ -111,18 +124,36 @@ Choose an option: """
                         try:
                             # Parse host and port
                             connect_args = cmd[8:].strip() if cmd.startswith('CONNECT ') else cmd[2:].strip()
+                            if not connect_args:
+                                ax25_socket.send(b"Usage: CONNECT <host>[:port]\n")
+                                continue
+                            
+                            # Basic validation
+                            if len(connect_args) > 100:  # Prevent overly long input
+                                ax25_socket.send(b"Host too long. Maximum 100 characters.\n")
+                                continue
+                            
                             if ':' in connect_args:
                                 host, port_str = connect_args.split(':', 1)
-                                port = int(port_str)
+                                try:
+                                    port = int(port_str)
+                                    if port < 1 or port > 65535:
+                                        ax25_socket.send(b"Invalid port number. Must be 1-65535.\n")
+                                        continue
+                                except ValueError:
+                                    ax25_socket.send(b"Invalid port number format.\n")
+                                    continue
                             else:
                                 host = connect_args
                                 port = 23
                             
-                            if not host:
-                                ax25_socket.send(b"Usage: CONNECT <host>[:port]\n")
+                            # Basic hostname validation
+                            if not host or not all(c.isalnum() or c in '.-' for c in host):
+                                ax25_socket.send(b"Invalid hostname format.\n")
                                 continue
                             
                             telnet_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                            telnet_socket.settimeout(30.0)  # 30 second timeout
                             telnet_socket.connect((host, port))
                             ax25_socket.send(f"Connecting to {host}:{port}...\n".encode())
                             print(f"AX.25 user connected to {host}:{port}")
@@ -133,8 +164,10 @@ Choose an option: """
                             telnet_to_ax25.start()
                             ax25_to_telnet.join()
                             telnet_to_ax25.join()
-                        except ValueError:
-                            ax25_socket.send(b"Invalid port number. Use: CONNECT <host>[:port]\n")
+                        except socket.timeout:
+                            ax25_socket.send(b"Connection timed out\n")
+                        except socket.gaierror:
+                            ax25_socket.send(b"Host not found\n")
                         except Exception as e:
                             ax25_socket.send(b"Failed to connect to specified server\n")
                             print(f"Failed to connect to {host}:{port}: {e}")
@@ -198,9 +231,27 @@ def main():
         while True:
             conn, addr = ax25_socket.accept()
             print(f"AX.25 connection from {addr}")
+            
+            # Check connection limit
+            global active_connections
+            if active_connections >= max_connections:
+                conn.send(b"Bridge is at maximum capacity. Please try again later.\n")
+                conn.close()
+                continue
+            
+            active_connections += 1
+            print(f"Active connections: {active_connections}/{max_connections}")
 
             # Handle the connection with menu system
-            threading.Thread(target=handle_ax25_connection, args=(conn, TELNET_HOST, TELNET_PORT)).start()
+            def connection_wrapper():
+                global active_connections
+                try:
+                    handle_ax25_connection(conn, TELNET_HOST, TELNET_PORT)
+                finally:
+                    active_connections -= 1
+                    print(f"Active connections: {active_connections}/{max_connections}")
+            
+            threading.Thread(target=connection_wrapper).start()
 
     except KeyboardInterrupt:
         print("Shutting down...")
