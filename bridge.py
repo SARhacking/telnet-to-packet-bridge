@@ -70,7 +70,7 @@ Choose an option: """
             # Connect to BBS
             try:
                 telnet_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                telnet_socket.settimeout(30.0)  # 30 second timeout
+                telnet_socket.settimeout(120.0)  # 120 second timeout
                 telnet_socket.connect((telnet_host, telnet_port))
                 
                 # Send user identification banner
@@ -170,7 +170,7 @@ Choose an option: """
                                 continue
                             
                             telnet_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                            telnet_socket.settimeout(30.0)  # 30 second timeout
+                            telnet_socket.settimeout(120.0)  # 120 second timeout
                             telnet_socket.connect((host, port))
                             
                             # Send user identification banner
