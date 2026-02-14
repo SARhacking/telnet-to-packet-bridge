@@ -77,6 +77,8 @@ Choose an option:
 ### BBS Mode
 - Connects the user directly to the telnet BBS
 - Full bidirectional data forwarding
+- **All keystrokes are sent directly to the BBS** - you can type 'q', 'exit', or any BBS commands normally
+- The bridge does not interpret commands in this mode
 
 ### Local Commands Mode
 Available commands:
