@@ -143,7 +143,7 @@ Choose an option: """
                                 telnet_socket.close()
                         break
                     elif cmd in ['EXIT', 'E', 'QUIT', 'Q']:
-                        ax25_socket.send(b"Are you sure you want to exit? (y/n): ")
+                        ax25_socket.send(b"Are you sure you want to exit the bridge? (y/n): ")
                         try:
                             confirm_data = ax25_socket.recv(1024)
                             if confirm_data:
