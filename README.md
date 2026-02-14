@@ -86,7 +86,7 @@ Available commands:
 - `STATUS` - Show bridge status
 - `BBS` - Switch to BBS connection
 - `CONNECT <host>[:port]` - Connect to any telnet server (default port 23)
-- `EXIT` - Disconnect
+- `EXIT` - Disconnect (requires confirmation)
 
 Users can switch between modes at any time.
 

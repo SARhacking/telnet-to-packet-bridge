@@ -82,7 +82,7 @@ Choose an option: """
                         break
                     cmd = data.strip().decode('ascii', errors='ignore').upper()
                     if cmd in ['HELP', 'H', '?']:
-                        ax25_socket.send(b"Commands:\nHELP - Show this help\nSTATUS - Show bridge status\nBBS - Connect to BBS\nCONNECT <host>[:port] - Connect to any telnet server\nEXIT - Disconnect\n")
+                        ax25_socket.send(b"Commands:\nHELP - Show this help\nSTATUS - Show bridge status\nBBS - Connect to BBS\nCONNECT <host>[:port] - Connect to any telnet server\nEXIT - Disconnect (requires confirmation)\n")
                     elif cmd in ['STATUS', 'S']:
                         ax25_socket.send(b"Bridge status: Running\nAX.25 interface active\n")
                     elif cmd in ['BBS', 'B']:
@@ -143,8 +143,20 @@ Choose an option: """
                                 telnet_socket.close()
                         break
                     elif cmd in ['EXIT', 'E', 'QUIT', 'Q']:
-                        ax25_socket.send(b"Goodbye\n")
-                        break
+                        ax25_socket.send(b"Are you sure you want to exit? (y/n): ")
+                        try:
+                            confirm_data = ax25_socket.recv(1024)
+                            if confirm_data:
+                                confirm = confirm_data.strip().decode('ascii', errors='ignore').upper()
+                                if confirm in ['Y', 'YES']:
+                                    ax25_socket.send(b"Goodbye\n")
+                                    break
+                                else:
+                                    ax25_socket.send(b"Exit cancelled.\n")
+                            else:
+                                ax25_socket.send(b"Exit cancelled.\n")
+                        except:
+                            ax25_socket.send(b"Exit cancelled.\n")
                     else:
                         ax25_socket.send(b"Unknown command. Type HELP for help.\n")
                 except:
