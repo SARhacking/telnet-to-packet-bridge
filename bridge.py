@@ -20,6 +20,7 @@ import sys
 import os
 import argparse
 import time
+import select
 
 # Ensure AX.25 module is loaded
 os.system('modprobe ax25')
@@ -73,14 +74,29 @@ Choose an option: """
                 telnet_socket.settimeout(30.0)  # 30 second timeout
                 telnet_socket.connect((telnet_host, telnet_port))
                 
-                # Send user identification banner
+                # Handle initial telnet negotiation for MajorBBS compatibility
+                telnet_socket.setblocking(False)
+                try:
+                    # Give server time to send initial negotiation
+                    ready, _, _ = select.select([telnet_socket], [], [], 1.0)
+                    if ready:
+                        initial_data = telnet_socket.recv(1024)
+                        # Could process telnet options here if needed
+                except:
+                    pass
+                telnet_socket.setblocking(True)
+                
+                # Send user identification banner (MajorBBS compatible)
                 try:
                     peer_info = ax25_socket.getpeername()
                     if peer_info and len(peer_info) > 0:
-                        user_id = f"[AX.25 Bridge - User: {peer_info[0]}]\r\n"
+                        # Format for MajorBBS - simple text without brackets
+                        user_id = f"AX.25 Bridge User: {peer_info[0]}\r\n"
                         telnet_socket.send(user_id.encode('ascii', errors='ignore'))
+                        # Give BBS time to process
+                        time.sleep(0.1)
                 except:
-                    telnet_socket.send(b"[AX.25 Bridge Connection]\r\n")
+                    telnet_socket.send(b"AX.25 Bridge Connection\r\n")
                 
                 print(f"AX.25 user connected to BBS")
                 # Start forwarding
@@ -173,14 +189,15 @@ Choose an option: """
                             telnet_socket.settimeout(30.0)  # 30 second timeout
                             telnet_socket.connect((host, port))
                             
-                            # Send user identification banner
+                            # Send user identification banner (MajorBBS compatible)
                             try:
                                 peer_info = ax25_socket.getpeername()
                                 if peer_info and len(peer_info) > 0:
-                                    user_id = f"[AX.25 Bridge - User: {peer_info[0]} - Connecting to {host}:{port}]\r\n"
+                                    user_id = f"AX.25 Bridge User: {peer_info[0]} connecting to {host}:{port}\r\n"
                                     telnet_socket.send(user_id.encode('ascii', errors='ignore'))
+                                    time.sleep(0.1)
                             except:
-                                telnet_socket.send(f"[AX.25 Bridge - Connecting to {host}:{port}]\r\n".encode())
+                                telnet_socket.send(f"AX.25 Bridge connecting to {host}:{port}\r\n".encode())
                             
                             ax25_socket.send(f"Connecting to {host}:{port}...\n".encode())
                             print(f"AX.25 user connected to {host}:{port}")
