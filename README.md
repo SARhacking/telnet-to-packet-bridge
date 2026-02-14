@@ -93,7 +93,15 @@ Available commands:
 
 Users can switch between modes at any time.
 
-## Running on Startup
+## IP Address and User Identification
+All AX.25 users will appear to connect from the bridge's IP address to telnet servers. Each user gets their own separate telnet connection, but they originate from the same source IP.
+
+To help BBS systems identify individual users, the bridge sends an identification banner when connecting:
+```
+[AX.25 Bridge - User: CALLSIGN]
+```
+
+This appears at the start of the telnet session and can help with logging and user identification on the BBS side.
 To automatically start the bridge when the system boots:
 
 1. Copy the service file:

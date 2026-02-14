@@ -50,7 +50,7 @@ def forward_data(source, destination):
         print(f"Error in data forwarding: {e}")
         pass
 
-def handle_ax25_connection(ax25_socket, telnet_host, telnet_port):
+def handle_ax25_connection(ax25_socket, telnet_host, telnet_port, user_callsign=None):
     """Handle AX.25 connection with menu system."""
     menu = b"""Welcome to the AX.25 Bridge
 
@@ -72,6 +72,16 @@ Choose an option: """
                 telnet_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 telnet_socket.settimeout(30.0)  # 30 second timeout
                 telnet_socket.connect((telnet_host, telnet_port))
+                
+                # Send user identification banner
+                try:
+                    peer_info = ax25_socket.getpeername()
+                    if peer_info and len(peer_info) > 0:
+                        user_id = f"[AX.25 Bridge - User: {peer_info[0]}]\r\n"
+                        telnet_socket.send(user_id.encode('ascii', errors='ignore'))
+                except:
+                    telnet_socket.send(b"[AX.25 Bridge Connection]\r\n")
+                
                 print(f"AX.25 user connected to BBS")
                 # Start forwarding
                 ax25_to_telnet = threading.Thread(target=forward_data, args=(ax25_socket, telnet_socket), daemon=True)
@@ -162,6 +172,16 @@ Choose an option: """
                             telnet_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                             telnet_socket.settimeout(30.0)  # 30 second timeout
                             telnet_socket.connect((host, port))
+                            
+                            # Send user identification banner
+                            try:
+                                peer_info = ax25_socket.getpeername()
+                                if peer_info and len(peer_info) > 0:
+                                    user_id = f"[AX.25 Bridge - User: {peer_info[0]} - Connecting to {host}:{port}]\r\n"
+                                    telnet_socket.send(user_id.encode('ascii', errors='ignore'))
+                            except:
+                                telnet_socket.send(f"[AX.25 Bridge - Connecting to {host}:{port}]\r\n".encode())
+                            
                             ax25_socket.send(f"Connecting to {host}:{port}...\n".encode())
                             print(f"AX.25 user connected to {host}:{port}")
                             # Start forwarding
