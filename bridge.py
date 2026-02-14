@@ -24,9 +24,16 @@ import time
 # Ensure AX.25 module is loaded
 os.system('modprobe ax25')
 
-# Global connection counter
-active_connections = 0
-max_connections = 10  # Limit concurrent connections
+def status_monitor():
+    """Monitor and display connection statistics."""
+    while True:
+        time.sleep(60)  # Update every minute
+        uptime = time.time() - start_time
+        print(f"Status: {active_connections} active, {total_connections} total connections, {uptime:.0f}s uptime")
+
+# Start status monitoring thread
+status_thread = threading.Thread(target=status_monitor, daemon=True)
+status_thread.start()
 
 def forward_data(source, destination):
     """Forward data from source to destination."""
@@ -67,8 +74,8 @@ Choose an option: """
                 telnet_socket.connect((telnet_host, telnet_port))
                 print(f"AX.25 user connected to BBS")
                 # Start forwarding
-                ax25_to_telnet = threading.Thread(target=forward_data, args=(ax25_socket, telnet_socket))
-                telnet_to_ax25 = threading.Thread(target=forward_data, args=(telnet_socket, ax25_socket))
+                ax25_to_telnet = threading.Thread(target=forward_data, args=(ax25_socket, telnet_socket), daemon=True)
+                telnet_to_ax25 = threading.Thread(target=forward_data, args=(telnet_socket, ax25_socket), daemon=True)
                 ax25_to_telnet.start()
                 telnet_to_ax25.start()
                 ax25_to_telnet.join()
@@ -158,8 +165,8 @@ Choose an option: """
                             ax25_socket.send(f"Connecting to {host}:{port}...\n".encode())
                             print(f"AX.25 user connected to {host}:{port}")
                             # Start forwarding
-                            ax25_to_telnet = threading.Thread(target=forward_data, args=(ax25_socket, telnet_socket))
-                            telnet_to_ax25 = threading.Thread(target=forward_data, args=(telnet_socket, ax25_socket))
+                            ax25_to_telnet = threading.Thread(target=forward_data, args=(ax25_socket, telnet_socket), daemon=True)
+                            telnet_to_ax25 = threading.Thread(target=forward_data, args=(telnet_socket, ax25_socket), daemon=True)
                             ax25_to_telnet.start()
                             telnet_to_ax25.start()
                             ax25_to_telnet.join()
@@ -220,9 +227,10 @@ def main():
         AF_AX25 = 3  # AX.25 address family
         ax25_socket = socket.socket(AF_AX25, socket.SOCK_SEQPACKET, 0)
         ax25_socket.bind((MY_CALL, 0))
-        ax25_socket.listen(10)  # Allow up to 10 pending connections
+        ax25_socket.listen(50)  # Allow up to 50 pending connections
         print(f"Listening for AX.25 connections on callsign: {MY_CALL}")
         print(f"Telnet BBS: {TELNET_HOST}:{TELNET_PORT}")
+        print(f"Max concurrent connections: {max_connections}")
     except Exception as e:
         print(f"Failed to set up AX.25 listener: {e}")
         sys.exit(1)
@@ -231,6 +239,10 @@ def main():
         while True:
             conn, addr = ax25_socket.accept()
             print(f"AX.25 connection from {addr}")
+            
+            # Update total connections counter
+            global total_connections
+            total_connections += 1
             
             # Check connection limit
             global active_connections
@@ -251,7 +263,8 @@ def main():
                     active_connections -= 1
                     print(f"Active connections: {active_connections}/{max_connections}")
             
-            threading.Thread(target=connection_wrapper).start()
+            thread = threading.Thread(target=connection_wrapper, daemon=True)
+            thread.start()
 
     except KeyboardInterrupt:
         print("Shutting down...")

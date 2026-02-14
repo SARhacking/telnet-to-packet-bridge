@@ -8,9 +8,10 @@ This project provides a two-way bridge between AX.25 packet connections from a K
 - Presents a text-based menu to users upon connection
 - Allows switching between BBS access and local commands
 - Forwards data bidirectionally between AX.25 clients and the telnet BBS at bbs.local.mesh:23
-- Supports multiple concurrent connections (up to 10)
+- Supports multiple concurrent connections (up to 50)
 - Connection timeouts and input validation for robustness
 - Resource management with connection limits
+- Performance monitoring and statistics
 
 ## Requirements
 - Kali Linux
@@ -132,6 +133,7 @@ The service will automatically restart if it crashes and start on boot.
 ## Notes
 - Connection timeouts (30 seconds) prevent hanging connections
 - Input validation prevents malformed hostnames/ports in CONNECT command
-- Maximum 10 concurrent connections to prevent resource exhaustion
-- Improved error handling with specific error messages
-- All data forwarding uses reliable sendall() method
+- Maximum 50 concurrent connections to handle high user loads
+- Daemon threads for efficient resource management
+- Performance monitoring with connection statistics
+- Automatic cleanup prevents resource leaks
