@@ -34,19 +34,91 @@ def forward_data(source, destination):
     except:
         pass
 
-def handle_ax25_connection(ax25_socket, telnet_socket):
-    """Handle data forwarding for an AX.25 connection."""
-    ax25_to_telnet = threading.Thread(target=forward_data, args=(ax25_socket, telnet_socket))
-    telnet_to_ax25 = threading.Thread(target=forward_data, args=(telnet_socket, ax25_socket))
+def handle_ax25_connection(ax25_socket, telnet_host, telnet_port):
+    """Handle AX.25 connection with menu system."""
+    menu = b"""Welcome to the AX.25 Bridge
 
-    ax25_to_telnet.start()
-    telnet_to_ax25.start()
+1. Connect to BBS
+2. Local Commands
 
-    ax25_to_telnet.join()
-    telnet_to_ax25.join()
-
-    ax25_socket.close()
-    telnet_socket.close()
+Choose an option: """
+    try:
+        ax25_socket.send(menu)
+        data = ax25_socket.recv(1024)
+        if not data:
+            ax25_socket.close()
+            return
+        choice = data.strip().decode('ascii', errors='ignore').upper()
+        
+        if choice in ['1', 'BBS', 'CONNECT', 'C']:
+            # Connect to BBS
+            try:
+                telnet_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                telnet_socket.connect((telnet_host, telnet_port))
+                print(f"AX.25 user connected to BBS")
+                # Start forwarding
+                ax25_to_telnet = threading.Thread(target=forward_data, args=(ax25_socket, telnet_socket))
+                telnet_to_ax25 = threading.Thread(target=forward_data, args=(telnet_socket, ax25_socket))
+                ax25_to_telnet.start()
+                telnet_to_ax25.start()
+                ax25_to_telnet.join()
+                telnet_to_ax25.join()
+            except Exception as e:
+                ax25_socket.send(b"Failed to connect to BBS\n")
+                print(f"Failed to connect to BBS: {e}")
+            finally:
+                ax25_socket.close()
+                if 'telnet_socket' in locals():
+                    telnet_socket.close()
+                    
+        elif choice in ['2', 'LOCAL', 'L']:
+            # Local commands mode
+            ax25_socket.send(b"Local mode. Type HELP for commands.\n")
+            while True:
+                ax25_socket.send(b"> ")
+                try:
+                    data = ax25_socket.recv(1024)
+                    if not data:
+                        break
+                    cmd = data.strip().decode('ascii', errors='ignore').upper()
+                    if cmd in ['HELP', 'H', '?']:
+                        ax25_socket.send(b"Commands:\nHELP - Show this help\nSTATUS - Show bridge status\nBBS - Connect to BBS\nEXIT - Disconnect\n")
+                    elif cmd in ['STATUS', 'S']:
+                        ax25_socket.send(b"Bridge status: Running\nAX.25 interface active\n")
+                    elif cmd in ['BBS', 'B', 'CONNECT', 'C']:
+                        # Switch to BBS
+                        try:
+                            telnet_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                            telnet_socket.connect((telnet_host, telnet_port))
+                            ax25_socket.send(b"Connecting to BBS...\n")
+                            print(f"AX.25 user switched to BBS")
+                            # Start forwarding
+                            ax25_to_telnet = threading.Thread(target=forward_data, args=(ax25_socket, telnet_socket))
+                            telnet_to_ax25 = threading.Thread(target=forward_data, args=(telnet_socket, ax25_socket))
+                            ax25_to_telnet.start()
+                            telnet_to_ax25.start()
+                            ax25_to_telnet.join()
+                            telnet_to_ax25.join()
+                        except Exception as e:
+                            ax25_socket.send(b"Failed to connect to BBS\n")
+                            print(f"Failed to connect to BBS: {e}")
+                        finally:
+                            if 'telnet_socket' in locals():
+                                telnet_socket.close()
+                        break
+                    elif cmd in ['EXIT', 'E', 'QUIT', 'Q']:
+                        ax25_socket.send(b"Goodbye\n")
+                        break
+                    else:
+                        ax25_socket.send(b"Unknown command. Type HELP for help.\n")
+                except:
+                    break
+            ax25_socket.close()
+        else:
+            ax25_socket.send(b"Invalid choice. Disconnecting.\n")
+            ax25_socket.close()
+    except:
+        ax25_socket.close()
 
 def main():
     parser = argparse.ArgumentParser(description='AX.25 to Telnet Bridge')
@@ -79,18 +151,8 @@ def main():
             conn, addr = ax25_socket.accept()
             print(f"AX.25 connection from {addr}")
 
-            # Establish telnet connection to BBS
-            try:
-                telnet_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                telnet_socket.connect((TELNET_HOST, TELNET_PORT))
-                print(f"Connected to telnet BBS: {TELNET_HOST}:{TELNET_PORT}")
-            except Exception as e:
-                print(f"Failed to connect to telnet BBS: {e}")
-                conn.close()
-                continue
-
-            # Handle the bridge in a separate thread for concurrency
-            threading.Thread(target=handle_ax25_connection, args=(conn, telnet_socket)).start()
+            # Handle the connection with menu system
+            threading.Thread(target=handle_ax25_connection, args=(conn, TELNET_HOST, TELNET_PORT)).start()
 
     except KeyboardInterrupt:
         print("Shutting down...")

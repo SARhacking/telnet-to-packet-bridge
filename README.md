@@ -5,6 +5,8 @@ This project provides a two-way bridge between AX.25 packet connections from a K
 
 ## Features
 - Listens for AX.25 connections on your callsign
+- Presents a text-based menu to users upon connection
+- Allows switching between BBS access and local commands
 - Forwards data bidirectionally between AX.25 clients and the telnet BBS at bbs.local.mesh:23
 - Supports multiple concurrent connections (up to 10 pending)
 
@@ -58,15 +60,32 @@ This project provides a two-way bridge between AX.25 packet connections from a K
 
 3. From your packet communicator, connect to your callsign (e.g., using AX.25 commands to connect to YOUR_CALLSIGN).
 
-4. The bridge will establish a telnet connection to the specified BBS and forward data bidirectionally.
+4. The bridge will present a text menu allowing users to choose between connecting to the BBS or accessing local commands.
 
-## Configuration
-The bridge is configured via command-line arguments:
+## Menu System
+When users connect via AX.25, they are presented with a text menu:
 
-- `--callsign`: Your AX.25 callsign (required)
-- `--host`: Hostname of the telnet BBS (default: bbs.local.mesh)
-- `--port`: Port of the telnet BBS (default: 23)
-- `--interface`: AX.25 interface name (default: ax0)
+```
+Welcome to the AX.25 Bridge
+
+1. Connect to BBS
+2. Local Commands
+
+Choose an option:
+```
+
+### BBS Mode
+- Connects the user directly to the telnet BBS
+- Full bidirectional data forwarding
+
+### Local Commands Mode
+Available commands:
+- `HELP` - Show available commands
+- `STATUS` - Show bridge status
+- `BBS` - Switch to BBS connection
+- `EXIT` - Disconnect
+
+Users can switch between modes at any time.
 
 ## Notes
 - This is a basic implementation.
