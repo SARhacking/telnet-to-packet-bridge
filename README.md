@@ -67,14 +67,14 @@ This project provides a two-way bridge between AX.25 packet connections from a K
 
 ## Docker
 
-### Build locally
+### Option 1: Build locally
 Build the container image from the repository root:
 
 ```bash
 docker build -t telnet-to-packet-bridge:local .
 ```
 
-### Run the container
+### and run the container
 This bridge needs AX.25 access and host networking, so run with host network and privileges:
 
 ```bash
@@ -93,21 +93,18 @@ Notes:
 - If AX.25 is already configured on the host, you may not need to pass a TNC device.
 - Check logs with `docker logs -f ax25-bridge`.
 
-### GitHub Actions image publishing
-This repository includes a GitHub Actions workflow at `.github/workflows/docker-image.yml` that:
-- Builds the Docker image on pull requests.
-- Builds and pushes multi-arch images (`linux/amd64`, `linux/arm64`) to GHCR on pushes to `main` and tags matching `v*`.
+### Option 2: Use GHCR For Latest Image
 
-Published image format:
+You can also use the GitHub Container Repository to obtain the latest official image. Published image link format:
 
 ```text
-ghcr.io/<github-owner>/telnet-to-packet-bridge:<tag>
+ghcr.io/sarhacking/telnet-to-packet-bridge:<tag>
 ```
 
 To run a published image:
 
 ```bash
-docker pull ghcr.io/<github-owner>/telnet-to-packet-bridge:main
+docker pull ghcr.io/sarhacking/telnet-to-packet-bridge:main
 docker run -d --name ax25-bridge \
   --restart unless-stopped \
   --network host \
