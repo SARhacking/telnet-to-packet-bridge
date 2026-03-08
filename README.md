@@ -111,7 +111,7 @@ docker run -d --name ax25-bridge \
   --privileged \
   --device /dev/ttyUSB0:/dev/ttyUSB0 \
   -v /etc/ax25:/etc/ax25 \
-  ghcr.io/<github-owner>/telnet-to-packet-bridge:main \
+  ghcr.io/sarhacking/telnet-to-packet-bridge:main \
   --callsign YOUR_CALLSIGN --host bbs.local.mesh --port 23 --interface ax0
 ```
 
