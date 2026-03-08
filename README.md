@@ -65,6 +65,59 @@ This project provides a two-way bridge between AX.25 packet connections from a K
 
 4. The bridge will present a text menu allowing users to choose between connecting to the BBS or accessing local commands.
 
+## Docker
+
+### Build locally
+Build the container image from the repository root:
+
+```bash
+docker build -t telnet-to-packet-bridge:local .
+```
+
+### Run the container
+This bridge needs AX.25 access and host networking, so run with host network and privileges:
+
+```bash
+docker run -d --name ax25-bridge \
+  --restart unless-stopped \
+  --network host \
+  --privileged \
+  --device /dev/ttyUSB0:/dev/ttyUSB0 \
+  -v /etc/ax25:/etc/ax25 \
+  telnet-to-packet-bridge:local \
+  --callsign YOUR_CALLSIGN --host bbs.local.mesh --port 23 --interface ax0
+```
+
+Notes:
+- Replace `/dev/ttyUSB0` and `YOUR_CALLSIGN` for your environment.
+- If AX.25 is already configured on the host, you may not need to pass a TNC device.
+- Check logs with `docker logs -f ax25-bridge`.
+
+### GitHub Actions image publishing
+This repository includes a GitHub Actions workflow at `.github/workflows/docker-image.yml` that:
+- Builds the Docker image on pull requests.
+- Builds and pushes multi-arch images (`linux/amd64`, `linux/arm64`) to GHCR on pushes to `main` and tags matching `v*`.
+
+Published image format:
+
+```text
+ghcr.io/<github-owner>/telnet-to-packet-bridge:<tag>
+```
+
+To run a published image:
+
+```bash
+docker pull ghcr.io/<github-owner>/telnet-to-packet-bridge:main
+docker run -d --name ax25-bridge \
+  --restart unless-stopped \
+  --network host \
+  --privileged \
+  --device /dev/ttyUSB0:/dev/ttyUSB0 \
+  -v /etc/ax25:/etc/ax25 \
+  ghcr.io/<github-owner>/telnet-to-packet-bridge:main \
+  --callsign YOUR_CALLSIGN --host bbs.local.mesh --port 23 --interface ax0
+```
+
 ## Menu System
 When users connect via AX.25, they are presented with a text menu:
 
