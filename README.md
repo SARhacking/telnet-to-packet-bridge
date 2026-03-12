@@ -65,6 +65,56 @@ This project provides a two-way bridge between AX.25 packet connections from a K
 
 4. The bridge will present a text menu allowing users to choose between connecting to the BBS or accessing local commands.
 
+## Docker
+
+### Option 1: Build locally
+Build the container image from the repository root:
+
+```bash
+docker build -t telnet-to-packet-bridge:local .
+```
+
+### and run the container
+This bridge needs AX.25 access and host networking, so run with host network and privileges:
+
+```bash
+docker run -d --name ax25-bridge \
+  --restart unless-stopped \
+  --network host \
+  --privileged \
+  --device /dev/ttyUSB0:/dev/ttyUSB0 \
+  -v /etc/ax25:/etc/ax25 \
+  telnet-to-packet-bridge:local \
+  --callsign YOUR_CALLSIGN --host bbs.local.mesh --port 23 --interface ax0
+```
+
+Notes:
+- Replace `/dev/ttyUSB0` and `YOUR_CALLSIGN` for your environment.
+- If AX.25 is already configured on the host, you may not need to pass a TNC device.
+- Check logs with `docker logs -f ax25-bridge`.
+
+### Option 2: Use GHCR For Latest Image
+
+You can also use the GitHub Container Repository to obtain the latest official image. Published image link format:
+
+```text
+ghcr.io/sarhacking/telnet-to-packet-bridge:<tag>
+```
+
+To run a published image:
+
+```bash
+docker pull ghcr.io/sarhacking/telnet-to-packet-bridge:main
+docker run -d --name ax25-bridge \
+  --restart unless-stopped \
+  --network host \
+  --privileged \
+  --device /dev/ttyUSB0:/dev/ttyUSB0 \
+  -v /etc/ax25:/etc/ax25 \
+  ghcr.io/sarhacking/telnet-to-packet-bridge:main \
+  --callsign YOUR_CALLSIGN --host bbs.local.mesh --port 23 --interface ax0
+```
+
 ## Menu System
 When users connect via AX.25, they are presented with a text menu:
 
